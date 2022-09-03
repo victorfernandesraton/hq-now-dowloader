@@ -13,10 +13,11 @@ const (
 	ErrorRequestExecution = "HTTP request with error on execute"
 	ErrorOnParseJSON      = "JSON response with error"
 	ErrorMarshallJSON     = "JSON response with error on marshall"
+	Domain                = "https://admin.hq-now.com/graphql"
 )
 
-func Request(url string, payload *strings.Reader) ([]byte, error) {
-	req, err := http.NewRequest("POST", url, payload)
+func Request(payload *strings.Reader) ([]byte, error) {
+	req, err := http.NewRequest("POST", Domain, payload)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("%s %v", ErrorOnRequest, err.Error()))
 	}

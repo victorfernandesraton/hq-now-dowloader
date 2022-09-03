@@ -35,11 +35,9 @@ type GetHqChapterResponse struct {
 
 func GetHqChapter(hqId int) ([]*GetHqChapterResponse, error) {
 
-	url := "https://admin.hq-now.com/graphql"
-
 	payload := strings.NewReader(fmt.Sprintf("{\n\t\"operationName\": \"getHqsById\",\n\t\"variables\": {\n\t\t\"id\": %v\n\t},\n\t\"query\": \"query getHqsById($id: Int!) {\\n  getHqsById(id: $id) {\\n    id\\n    name\\n    synopsis\\n    editoraId\\n    status\\n    publisherName\\n    hqCover\\n    impressionsCount\\n    capitulos {\\n      name\\n      id\\n      number\\n    }\\n  }\\n}\\n\"\n}", hqId))
 
-	body, err := Request(url, payload)
+	body, err := Request(payload)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("%s %v", ErrorOnParseJSON, err.Error()))
 	}
