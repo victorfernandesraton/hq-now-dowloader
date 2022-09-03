@@ -5,7 +5,9 @@ import (
 )
 
 func main() {
-	err := commands.CreateAllChapters(309)
+	// err := commands.CreateAllChapters(309)
+
+	err := commands.CreateByOneChapter(309, 2)
 	if err != nil {
 		panic(err)
 	}
