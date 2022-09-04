@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 func DownloadFile(filepath string, url string) (err error) {
@@ -24,4 +27,19 @@ func DownloadFile(filepath string, url string) (err error) {
 	}
 
 	return nil
+}
+
+func FindFiles(root string) ([]string, error) {
+	var files []string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() && !strings.Contains(path, ".pdf") {
+			fmt.Printf("reading data from %s\n", path)
+			files = append(files, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
 }

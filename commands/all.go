@@ -20,11 +20,13 @@ func GetPages(chapter *extract.GetHqChapterResponse) error {
 	if err != nil {
 		return err
 	}
+	serieFolder := fmt.Sprintf("output/%v/", data.Name)
+	folder := fmt.Sprintf("%v/%v", serieFolder, chapter.Number)
 
 	for k, page := range data.Pictures {
 		wg.Add(1)
 		fmt.Printf("extract and dowload file %v\n", page.PictureURL)
-		folder := fmt.Sprintf("output/%v/%v", data.Name, chapter.Number)
+		fmt.Printf("find in folder %s", serieFolder)
 		err = os.MkdirAll(folder, 0755)
 		if err != nil {
 			return err
@@ -35,7 +37,7 @@ func GetPages(chapter *extract.GetHqChapterResponse) error {
 		}(page.PictureURL, k)
 	}
 	wg.Wait()
-	return nil
+	return GeneratePdf(folder)
 }
 
 func CreateAllChapters(id int) error {
@@ -79,4 +81,13 @@ func CreateByOneChapter(id int, chapter int) error {
 		return err
 	}
 	return nil
+}
+
+func GeneratePdf(serieFolder string) error {
+	files, err := builder.FindFiles(serieFolder)
+	fmt.Println(files)
+	if err != nil {
+		return err
+	}
+	return builder.BuildToPdf(files, fmt.Sprintf("%s/output", serieFolder))
 }
