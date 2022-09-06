@@ -12,7 +12,9 @@ func BuildToPdf(images []string, outPath string) error {
 	pdf := fpdf.New("P", "mm", "A4", "")
 	for _, v := range images {
 		pdf.AddPage()
-		pdf.ImageOptions(v, 0, 0, 0, 0, false, fpdf.ImageOptions{}, 0, "")
+		pdf.ImageOptions(v, 0, 0, 0, 0, false, fpdf.ImageOptions{
+			ReadDpi: true,
+		}, 0, "")
 	}
 	return pdf.OutputFileAndClose(pdfPath)
 }

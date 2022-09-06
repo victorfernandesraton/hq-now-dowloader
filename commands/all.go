@@ -20,6 +20,7 @@ func GetPages(chapter *extract.GetHqChapterResponse) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("creating chapter %v(%v) with %v pages\n", chapter.Number, chapter.ID, len(data.Pictures))
 	serieFolder := fmt.Sprintf("output/%v/", data.Name)
 	folder := fmt.Sprintf("%v/%v", serieFolder, chapter.Number)
 
@@ -29,6 +30,7 @@ func GetPages(chapter *extract.GetHqChapterResponse) error {
 		fmt.Printf("find in folder %s", serieFolder)
 		err = os.MkdirAll(folder, 0755)
 		if err != nil {
+			wg.Done()
 			return err
 		}
 		go func(picture string, page int) {
@@ -47,15 +49,15 @@ func CreateAllChapters(id int) error {
 	if err != nil {
 		return err
 	}
-
-	for _, chapter := range chapters {
+	fmt.Printf("total chapters %v\n", len(chapters.Chapters))
+	for _, chapter := range chapters.Chapters {
 		wg.Add(1)
-		go func(chapter *extract.GetHqChapterResponse) {
-			GetPages(chapter)
+		go func(chapter extract.GetHqChapterResponse) {
+			GetPages(&chapter)
 			wg.Done()
 		}(chapter)
+		wg.Wait()
 	}
-	wg.Wait()
 	return nil
 }
 
@@ -67,13 +69,17 @@ func CreateByOneChapter(id int, chapter int) error {
 		return err
 	}
 
-	for _, item := range chapters {
+	for _, item := range chapters.Chapters {
 		num, err := strconv.Atoi(item.Number)
 		if err != nil {
 			return err
 		}
 		if item.ID == chapter || num == chapter {
-			current = item
+			current = &extract.GetHqChapterResponse{
+				Name:   item.Name,
+				ID:     item.ID,
+				Number: item.Number,
+			}
 		}
 	}
 
