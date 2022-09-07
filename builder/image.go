@@ -2,12 +2,18 @@ package builder
 
 import (
 	"fmt"
+	"image"
+	"image/draw"
+	"image/jpeg"
+	_ "image/jpeg"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+const FixedWidth = 794
 
 func DownloadFile(filepath string, url string) (err error) {
 
@@ -42,4 +48,34 @@ func FindFiles(root string) ([]string, error) {
 		return nil, err
 	}
 	return files, nil
+}
+
+func ResizeImage(path string, output string) (*string, error) {
+	file, err := os.Open(path)
+	defer file.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	outputFile, err := os.Create(output)
+	defer outputFile.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := jpeg.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+	scale := img.Bounds().Dx() / FixedWidth
+	height := img.Bounds().Dy() * scale
+
+	dst := image.NewRGBA(image.Rect(0, 0, FixedWidth, height))
+
+	draw.Draw(dst, image.Rect(image.ZP.X, image.ZP.Y, 400, 499), img, img.Bounds().Size(), draw.Over)
+
+	if err := jpeg.Encode(outputFile, dst, &jpeg.Options{}); err != nil {
+		return nil, err
+	}
+	return &output, nil
 }

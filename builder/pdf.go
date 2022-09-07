@@ -12,7 +12,7 @@ import (
 func BuildToPdf(images []string, outPath string) error {
 	pdfPath := fmt.Sprintf("%s.pdf", outPath)
 	fmt.Printf("Generate pd %s\n", pdfPath)
-	pdf := fpdf.New("P", "mm", "A4", "")
+	pdf := fpdf.New("P", "mm", "Tabloid", "")
 	for _, imgFile := range images {
 
 		if reader, err := os.Open(filepath.Join(imgFile)); err == nil {
@@ -24,8 +24,9 @@ func BuildToPdf(images []string, outPath string) error {
 			}
 			fmt.Printf("%s %d %d\n", imgFile, im.Width, im.Height)
 			pdf.AddPage()
-			pdf.ImageOptions(imgFile, 0, 0, 0, 0, false, fpdf.ImageOptions{
-				ReadDpi: true,
+			pdf.ImageOptions(imgFile, 0, 0, 0, 430, false, fpdf.ImageOptions{
+				ReadDpi:               true,
+				AllowNegativePosition: true,
 			}, 0, "")
 		} else {
 			return err
