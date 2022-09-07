@@ -1,20 +1,28 @@
 package main
 
 import (
+	"github.com/spf13/cobra"
 	"github.com/victorfernandesraton/hq-now-dowloader/commands"
 	"github.com/victorfernandesraton/hq-now-dowloader/convert"
 )
 
 func main() {
-	urlInfo, err := convert.ParseUrlFromHQ("https://www.hq-now.com/hq/309/sandman")
-	if err != nil {
-		panic(err)
+	var cmdHq = &cobra.Command{
+		Use:   "hq [url from hq]",
+		Short: "dowload all hq chapters",
+		Long:  "Dowload all hq chapters and generate pdf with use a valid url",
+		Args:  cobra.MinimumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			info, err := convert.ParseUrlFromHQ(args[0])
+			if err != nil {
+				panic(err)
+			}
+			if err = commands.CreateAllChapters(info.ID); err != nil {
+				panic(err)
+			}
+		},
 	}
-	// err := commands.CreateAllChapters(309)
-
-	err = commands.CreateAllChapters(urlInfo.ID)
-	if err != nil {
-		panic(err)
-	}
-
+	var rootCmd = &cobra.Command{Use: "app"}
+	rootCmd.AddCommand(cmdHq)
+	rootCmd.Execute()
 }

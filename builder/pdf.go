@@ -3,6 +3,7 @@ package builder
 import (
 	"fmt"
 	"image"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -11,7 +12,7 @@ import (
 
 func BuildToPdf(images []string, outPath string) error {
 	pdfPath := fmt.Sprintf("%s.pdf", outPath)
-	fmt.Printf("Generate pd %s\n", pdfPath)
+	log.Printf("Generate pd %s\n", pdfPath)
 	pdf := fpdf.New("P", "mm", "Tabloid", "")
 	for _, imgFile := range images {
 
@@ -22,7 +23,7 @@ func BuildToPdf(images []string, outPath string) error {
 				fmt.Fprintf(os.Stderr, "%s: %v\n", imgFile, err)
 				continue
 			}
-			fmt.Printf("%s %d %d\n", imgFile, im.Width, im.Height)
+			log.Printf("%s %d %d\n", imgFile, im.Width, im.Height)
 			pdf.AddPage()
 			pdf.ImageOptions(imgFile, 0, 0, 0, 430, false, fpdf.ImageOptions{
 				ReadDpi:               true,
