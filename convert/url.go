@@ -46,28 +46,3 @@ func ParseUrlFromHQ(url string) (*UrlHQResponse, error) {
 		ID:   idNumber,
 	}, nil
 }
-
-func ParseUrlFromChapter(url string) (*UrlChapterResponse, error) {
-	split := strings.Split(url, SlashSeparator)
-	if split[2] != DefaultDomain {
-		return nil, fmt.Errorf(ErrorInvalidDomain, DefaultDomain, split[2])
-	}
-	if len(split) != 10 {
-		return nil, errors.New(ErrorInvalidHqUrl)
-	}
-
-	idNumber, err := strconv.Atoi(split[4])
-	if err != nil {
-		return nil, err
-	}
-	idChapter, err := strconv.Atoi(split[7])
-	if err != nil {
-		return nil, err
-	}
-
-	return &UrlChapterResponse{
-		Name:    strings.ReplaceAll(split[5], "%20", " "),
-		ID:      idNumber,
-		Chapter: idChapter,
-	}, nil
-}

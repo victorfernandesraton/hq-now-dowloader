@@ -16,7 +16,7 @@ const (
 	Domain                = "https://admin.hq-now.com/graphql"
 )
 
-func Request(payload *strings.Reader) ([]byte, error) {
+func request(payload *strings.Reader) ([]byte, error) {
 	req, err := http.NewRequest("POST", Domain, payload)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("%s %v", ErrorOnRequest, err.Error()))
