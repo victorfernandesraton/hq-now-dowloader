@@ -1,47 +1,16 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/victorfernandesraton/hq-now-dowloader/builder"
 	"github.com/victorfernandesraton/hq-now-dowloader/extract"
 )
 
 const ErrorChapterNotFound = "Chapter not found in HQ"
-
-func GeAllChapters(id int) error {
-	var wg sync.WaitGroup
-
-	hqInfo, err := extract.GetHqInfo(id)
-	if err != nil {
-		return err
-	}
-	log.Printf("find data for hq %v with %v chapters\n", hqInfo.Name, len(hqInfo.Capitulos))
-
-	wg.Add(len(hqInfo.Capitulos))
-	for _, chapter := range hqInfo.Capitulos {
-		go func(chapter extract.HqChapter) {
-
-			images, err := GetImagesByteByChapter(&chapter)
-			if err != nil {
-				panic(err)
-			}
-			builder := &builder.BulderPdf{
-				Output: fmt.Sprintf("%v-%v.pdf", hqInfo.Name, chapter.Number),
-			}
-			if err := builder.Execute(images); err != nil {
-				panic(err)
-			}
-			wg.Done()
-		}(chapter)
-	}
-	wg.Wait()
-
-	return nil
-}
 
 func GetImagesByteByChapter(chapter *extract.HqChapter) ([][]byte, error) {
 	var wg sync.WaitGroup
@@ -62,43 +31,54 @@ func GetImagesByteByChapter(chapter *extract.HqChapter) ([][]byte, error) {
 	return images, nil
 }
 
-func GetByChapter(id int, chapter string) error {
-	var wg sync.WaitGroup
-	var chapters []extract.HqChapter
+func BuildChapter(chapter extract.HqChapter, outputFile string) error {
+	builder := &builder.BulderPdf{
+		Output: outputFile,
+	}
+	images, err := GetImagesByteByChapter(&chapter)
+	if err != nil {
+		return err
+	}
+	return builder.Execute(images)
+}
+
+func GeAllChapters(id int) error {
+
 	hqInfo, err := extract.GetHqInfo(id)
 	if err != nil {
 		return err
 	}
+	log.Printf("find data for hq %v with %v chapters\n", hqInfo.Name, len(hqInfo.Capitulos))
 
-	for _, v := range hqInfo.Capitulos {
-		if v.Number == chapter {
-			chapters = append(chapters, v)
-		}
-	}
-
-	if len(chapters) == 0 {
-		return errors.New(ErrorChapterNotFound)
-	}
-
-	log.Printf("find data for hq %v with chapter %v\n", hqInfo.Name, chapter)
-
-	wg.Add(len(chapters))
-	for _, chapter := range chapters {
+	var wg sync.WaitGroup
+	wg.Add(len(hqInfo.Capitulos))
+	for _, chapter := range hqInfo.Capitulos {
 		go func(chapter extract.HqChapter) {
-
-			images, err := GetImagesByteByChapter(&chapter)
-			if err != nil {
-				panic(err)
-			}
-			builder := &builder.BulderPdf{
-				Output: fmt.Sprintf("%v-%v.pdf", hqInfo.Name, chapters[0].Number),
-			}
-			if err := builder.Execute(images); err != nil {
+			if err := BuildChapter(chapter, fmt.Sprintf("%v-%v.pdf", hqInfo.Name, chapter.Number)); err != nil {
 				panic(err)
 			}
 			wg.Done()
 		}(chapter)
 	}
 	wg.Wait()
+
 	return nil
+}
+
+func GetByChapter(id int, chapter string) error {
+
+	hqInfo, err := extract.GetHqInfo(id)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("find data for hq %v with chapter %v\n", hqInfo.Name, chapter)
+
+	for _, v := range hqInfo.Capitulos {
+		if v.Number == chapter {
+			return BuildChapter(v, fmt.Sprintf("%v-%v.pdf", hqInfo.Name, v.Number))
+		}
+	}
+
+	return errors.New(ErrorChapterNotFound)
 }
