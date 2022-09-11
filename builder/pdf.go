@@ -1,36 +1,34 @@
 package builder
 
 import (
-	"fmt"
-	"image"
 	"log"
-	"os"
-	"path/filepath"
 
-	"github.com/go-pdf/fpdf"
+	"github.com/signintech/gopdf"
 )
 
-func BuildToPdf(images []string, outPath string) error {
-	pdfPath := fmt.Sprintf("%s.pdf", outPath)
-	log.Printf("Generate pdf %s\n", pdfPath)
-	pdf := fpdf.New("P", "mm", "Tabloid", "")
-	for _, imgFile := range images {
+type BulderPdf struct {
+	Output string
+}
 
-		if reader, err := os.Open(filepath.Join(imgFile)); err == nil {
-			defer reader.Close()
-			_, _, err := image.DecodeConfig(reader)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s: %v\n", imgFile, err)
-				continue
-			}
-			pdf.AddPage()
-			pdf.ImageOptions(imgFile, 0, 0, 0, 430, false, fpdf.ImageOptions{
-				ReadDpi:               true,
-				AllowNegativePosition: true,
-			}, 0, "")
-		} else {
+func (b *BulderPdf) Execute(images [][]byte) error {
+	pdf := gopdf.GoPdf{}
+	pdf.Start(gopdf.Config{PageSize: gopdf.Rect{W: 595.28, H: 841.89}}) //595.28, 841.89 = A4
+
+	log.Printf("create pdf\n")
+
+	for k, image := range images {
+		log.Printf("add page %v of %v\n", k, len(images))
+
+		pdf.AddPage()
+
+		imgH2, err := gopdf.ImageHolderByBytes(image)
+		if err != nil {
+			return err
+		}
+		if err := pdf.ImageByHolder(imgH2, 0, 0, nil); err != nil {
 			return err
 		}
 	}
-	return pdf.OutputFileAndClose(pdfPath)
+
+	return pdf.WritePdf(b.Output)
 }

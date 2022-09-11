@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"sync"
 
 	"github.com/victorfernandesraton/hq-now-dowloader/builder"
@@ -13,65 +12,60 @@ import (
 
 const ErrorChapterNotFound = "Chapter not found in HQ"
 
-func getImages(folder string, url string) error {
-	return builder.DownloadFile(fmt.Sprintf("%v.jpg", folder), url)
-}
-
-func ProcessConcurrentImages(folder string, chapters []extract.HqChapter) {
-	var wg sync.WaitGroup
-
-	wg.Add(len(chapters))
-	for _, chapter := range chapters {
-		log.Printf("process image chapter %v of %v", chapter.Number, len(chapters))
-		filename := fmt.Sprintf("%v/%v", folder, chapter.Number)
-		go func(ch extract.HqChapter) {
-			if err := GetPages(filename, ch); err != nil {
-				panic(err)
-			}
-			wg.Done()
-		}(chapter)
-	}
-	wg.Wait()
-	return
-}
-
-func GetPages(foldername string, chapter extract.HqChapter) error {
-	var wg sync.WaitGroup
-
-	log.Printf("creating chapter %v(%v) with %v pages\n", chapter.Number, chapter.ID, len(chapter.Pictures))
-
-	wg.Add(len(chapter.Pictures))
-	for k, page := range chapter.Pictures {
-		log.Printf("extract and dowload file %v\n", page.PictureURL)
-		log.Printf("find in folder %s", foldername)
-		if err := os.MkdirAll(foldername, 0755); err != nil {
-			panic(err)
-		}
-		go func(picture string, page int) {
-			getImages(fmt.Sprintf("%v/%v", foldername, page), picture)
-			wg.Done()
-		}(page.PictureURL, k)
-	}
-	wg.Wait()
-	return GeneratePdf(foldername)
-}
-
 func GeAllChapters(id int) error {
+	var wg sync.WaitGroup
+
 	hqInfo, err := extract.GetHqInfo(id)
 	if err != nil {
 		return err
 	}
 	log.Printf("find data for hq %v with %v chapters\n", hqInfo.Name, len(hqInfo.Capitulos))
 
-	folder := fmt.Sprintf("output/%v", hqInfo.Name)
-	log.Printf("processsing chapters for %s, output in folder %s", hqInfo.Name, folder)
-	ProcessConcurrentImages(folder, hqInfo.Capitulos)
+	wg.Add(len(hqInfo.Capitulos))
+	for _, chapter := range hqInfo.Capitulos {
+		go func(chapter extract.HqChapter) {
+
+			images, err := GetImagesByteByChapter(&chapter)
+			if err != nil {
+				panic(err)
+			}
+			builder := &builder.BulderPdf{
+				Output: fmt.Sprintf("%v-%v.pdf", hqInfo.Name, chapter.Number),
+			}
+			if err := builder.Execute(images); err != nil {
+				panic(err)
+			}
+			wg.Done()
+		}(chapter)
+	}
+	wg.Wait()
+
 	return nil
 }
 
+func GetImagesByteByChapter(chapter *extract.HqChapter) ([][]byte, error) {
+	var wg sync.WaitGroup
+	images := make([][]byte, len(chapter.Pictures))
+	wg.Add(len(chapter.Pictures))
+	for k, picture := range chapter.Pictures {
+		go func(picture string, page int) {
+			image, err := builder.DowloadFileAsBytes(picture)
+			if err != nil {
+				panic(err)
+			}
+			images[page] = image
+			wg.Done()
+		}(picture.PictureURL, k)
+	}
+	wg.Wait()
+
+	return images, nil
+}
+
 func GetByChapter(id int, chapter string) error {
-	hqInfo, err := extract.GetHqInfo(id)
+	var wg sync.WaitGroup
 	var chapters []extract.HqChapter
+	hqInfo, err := extract.GetHqInfo(id)
 	if err != nil {
 		return err
 	}
@@ -88,16 +82,23 @@ func GetByChapter(id int, chapter string) error {
 
 	log.Printf("find data for hq %v with chapter %v\n", hqInfo.Name, chapter)
 
-	folder := fmt.Sprintf("output/%v", hqInfo.Name)
-	log.Printf("processsing chapters for %s, output in folder %s", hqInfo.Name, folder)
-	ProcessConcurrentImages(folder, chapters)
-	return nil
-}
+	wg.Add(len(chapters))
+	for _, chapter := range chapters {
+		go func(chapter extract.HqChapter) {
 
-func GeneratePdf(serieFolder string) error {
-	files, err := builder.FindFiles(serieFolder)
-	if err != nil {
-		return err
+			images, err := GetImagesByteByChapter(&chapter)
+			if err != nil {
+				panic(err)
+			}
+			builder := &builder.BulderPdf{
+				Output: fmt.Sprintf("%v-%v.pdf", hqInfo.Name, chapters[0].Number),
+			}
+			if err := builder.Execute(images); err != nil {
+				panic(err)
+			}
+			wg.Done()
+		}(chapter)
 	}
-	return builder.BuildToPdf(files, fmt.Sprintf("%s/output", serieFolder))
+	wg.Wait()
+	return nil
 }
